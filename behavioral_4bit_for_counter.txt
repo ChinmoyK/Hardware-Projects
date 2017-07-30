@@ -1,0 +1,42 @@
+--vhdl code for 4 bit up counter 
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+-- defines a package design unit that contains declarations that support a uniform representation of a logic value in a VHDL hardware description
+
+
+use IEEE.STD_LOGIC_ARITH.ALL;
+--provides numerical computation and  has arithmetic functions
+
+
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+--provides unsigned numerical computation on type std_logic_vector
+
+
+--A VHDL entity specifies the name of the entity, the ports of the entity, and entity-related information
+entity Counter2_VHDL is
+   port(
+   sw0: in std_logic;   --port used for clock
+   sw1: in std_logic;   --port used for reset
+   Output: out std_logic_vector(3 downto 0)); --port used for showing the 4 bit counter on fpga board,this port is 4 bit counter each vector for each significant bit
+end Counter2_VHDL
+
+;
+ 
+
+-- architecture is always related to an entity and describes the behavior of that entity
+architecture Behavioral of Counter2_VHDL is
+   signal temp: std_logic_vector(3 downto 0);  --another 4 bit vector used inside the behavioral design to hold temporary values of output bits
+begin   process(sw0,sw1)  --beggining of each cycle of each duty cycle
+   begin
+      if sw1='1' then  --when value of reset is 1 then 4 bit vector have all its value 0
+         temp <= "0000";
+      elsif(rising_edge(sw0)) then  --if reset is 0 then counter will function normally  --this counter is triggred by positive edge clock
+          if temp="1111" then   --whenever all leds are glowed then all 4 bits will go to 0 
+             temp<="0000";
+          else  --else counter will be incremented by 1 or decimal representation of 4 bit vector wll be incremented by 1
+             temp <= temp + 1;
+          end if;
+      end if;
+   end process;  --end of duty cycle
+   Output <= temp;  --finally assigning our 4 bit vecto which holds temporary value is assigned to output port
+end Behavioral; --end of behavioral design

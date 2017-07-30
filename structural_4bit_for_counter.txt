@@ -1,0 +1,32 @@
+--this is structural code for 4 bit counter using jk flip flop
+library ieee;
+--this is the module design to implement gate level simulation of jk flip flop
+use ieee.std_logic_1164.all;
+
+
+--A VHDL entity specifies the name of the entity, the ports of the entity, and entity-related information
+entity synchcnt is
+port(rst,clk:in std_logic;	--input ports
+q,qbar:inout std_logic_vector(3 downto 0));	--output ports
+end synchcnt;	--end of entity design
+
+
+-- architecture is always related to an entity and describes the behavior of that entity
+architecture behavioural of synchcnt is 
+component jk_ff is
+port(j,k,rst,clk:in std_logic;
+q,qbar:out std_logic);
+end component;
+signal i,j,k:std_logic;
+begin
+i<=q(0);   --input port at second flip flop which is the output of first flip flop
+
+j<=q(0) and q(1);  --input port at third flip flip which is output of (and) gate having two input(and gate) as output of first and second flip flop 
+
+k<=q(0) and q(1) and q(2);  ----input port at forth flip flip which is output of (and) gate having threeinput(and gate) as output of first and second and third flfp
+--all of the below entities has jk module designed in j_k_ff_cm file
+a1:jk_ff port map('1','1',rst,clk,q(0),qbar(0));  --entity:first flip flop ,input:1 ,output:4th bit(least significant bit)
+a2:jk_ff port map(i,i,rst,clk,q(1),qbar(1));	--entity:second flip flop ,input:q(0)(output of first entity) ,output:3th bit
+a3:jk_ff port map(j,j,rst,clk,q(2),qbar(2));	--entity:third flip flop ,input:q(0) and q(1)(output of firt and sec entity) ,output:4th bit(least significant bit)
+a4:jk_ff port map(k,k,rst,clk,q(3),qbar(3));	--entity:4th flip flop ,input:q(0) and q(1) and q(2)(o/p of 1st and 2nd and 3rd) ,o/o:4th bit(least significant bit)
+end behavioural; 

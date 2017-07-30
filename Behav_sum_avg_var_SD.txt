@@ -1,0 +1,274 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use ieee.numeric_std.all;
+
+-- entity declaration
+entity Counter2_VHDL is
+   port(
+   sw0 : in std_logic; 
+   sw1 : in std_logic; 
+   sw2 : in std_logic; 
+   clk : in std_logic;
+   btnC : in std_logic;
+   sw : in std_logic_vector(3 downto 0);
+   led : out std_logic_vector(15 downto 0));
+end Counter2_VHDL;
+
+--start of behavioral design
+architecture Behavioral of Counter2_VHDL is
+    --declaration of array type having array of standard logic vector and standard logics
+   type array_type_1 is array (0 to 8) of std_logic_vector(7 downto 0);
+   type array_type_4 is array (0 to 8) of std_logic;
+   type array_type_3 is array (0 to 8) of std_logic_vector(15 downto 0);
+   
+   -- initialization of arrays
+   signal temp : array_type_1 := (others=> (others=>'0'));
+   signal brr : array_type_4 := ('0','0','0','0','0','0','0','0','0');
+   signal tempsq : array_type_3 := (others=> (others=>'0'));
+
+    --daclaration and initialisation of temporary standard logic vectors
+   signal disp:std_logic_vector(7 downto 0) := (others=>'0');--used to store sum
+   signal disp2:std_logic_vector(15 downto 0) := (others=>'0');--used to store average
+   signal disp3:std_logic_vector(15 downto 0) := (others=>'0');--used to store sum of squares
+   signal disp4:std_logic_vector(23 downto 0) := (others=>'0');--used to store sum of squares divided of number of entries
+   signal disp7:std_logic_vector(15 downto 0) := (others=>'0');--used to store square of mean
+   signal disp8:std_logic_vector(15 downto 0) := (others=>'0');--used to store variance
+   signal disp9:std_logic_vector(15 downto 0) := (others=>'0');--used to store SD
+   signal chin2:std_logic_vector(3 downto 0):= (others=>'0');--used to store number of entries
+   signal chin:std_logic_vector(7 downto 0):= (others=>'0');
+   signal abho1:std_logic;--for state change
+   signal abho2:std_logic;
+   signal abho3:std_logic;
+   signal abho4:std_logic;
+   shared variable j : integer := 0;
+   
+  --component for divider generator
+   COMPONENT div_gen_0
+  PORT (
+    aclk : IN STD_LOGIC;
+    aclken : IN STD_LOGIC;
+    s_axis_divisor_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    s_axis_dividend_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    m_axis_dout_tdata : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+
+--component for subtraction
+COMPONENT c_addsub_0
+  PORT (
+    A : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    B : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    CLK : IN STD_LOGIC;
+    CE : IN STD_LOGIC;
+    S : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+--component for squareroot
+COMPONENT cordic_0
+  PORT (
+    aclk : IN STD_LOGIC;
+    aclken : IN STD_LOGIC;
+    s_axis_cartesian_tdata : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    m_axis_dout_tdata : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+
+--component for multiplication
+COMPONENT mult_gen_0
+  PORT (
+    CLK : IN STD_LOGIC;
+    A : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    B : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    CE : IN STD_LOGIC;
+    P : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+
+--component for division
+COMPONENT div_gen_1
+  PORT (
+    aclk : IN STD_LOGIC;
+    aclken : IN STD_LOGIC;
+    s_axis_divisor_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    s_axis_dividend_tdata : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    m_axis_dout_tdata : OUT STD_LOGIC_VECTOR(23 DOWNTO 0)
+  );  
+END COMPONENT;  
+
+begin
+
+--instance for dividing sum of numbers by number of inputs
+inst1:div_gen_0
+  PORT MAP (
+    aclk => clk,
+    aclken => abho2,
+    s_axis_divisor_tdata => chin,
+    s_axis_dividend_tdata => disp,
+    m_axis_dout_tdata => disp2
+  );
+
+--a0 to a8 are the instances of calculating squares of values stored in registers
+a0 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(0),
+    B => temp(0),
+    CE => brr(0),
+    P => tempsq(0)
+  );
+
+a1 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(1),
+    B => temp(1),
+    CE => brr(1),
+    P => tempsq(1)
+  );
+
+a2 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(2),
+    B => temp(2),
+    CE => brr(2),
+    P => tempsq(2)
+  );
+
+a3 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(3),
+    B => temp(3),
+    CE => brr(3),
+    P => tempsq(3)
+  );
+
+a4 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(4),
+    B => temp(4),
+    CE => brr(4),
+    P => tempsq(4)
+  );
+
+a5 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(5),
+    B => temp(5),
+    CE => brr(5),
+    P => tempsq(5)
+  );
+
+a6 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(6),
+    B => temp(6),
+    CE => brr(6),
+    P => tempsq(6)
+  );
+
+a7 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(7),
+    B => temp(7),
+    CE => brr(7),
+    P => tempsq(7)
+  );
+
+a8 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => temp(8),
+    B => temp(8),
+    CE => brr(8),
+    P => tempsq(8)
+  );  
+
+--instance of calculating sum of squares divided by number of inputs
+b1 : div_gen_1
+  PORT MAP (
+    aclk => clk,
+    aclken => abho3,
+    s_axis_divisor_tdata => chin,
+    s_axis_dividend_tdata => disp3,
+    m_axis_dout_tdata => disp4
+  );
+
+--instance for calculating square of average
+b2 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    A => disp2(15 downto 8),
+    B => disp2(15 downto 8),
+    CE => abho3,
+    P => disp7
+  );  
+
+--instance of subtracting (sum of squares divided by no. of inputs) and square of average
+--instance for calculating variance
+b3 : c_addsub_0
+  PORT MAP (
+    A => disp4(23 downto 8),
+    B => disp7,
+    CLK => clk,
+    CE => abho3,
+    S => disp8
+  );
+
+--instance for calculating square root of variance
+c1: cordic_0
+  PORT MAP (
+    aclk => clk,
+    aclken => abho4,
+    s_axis_cartesian_tdata => disp8,
+    m_axis_dout_tdata => disp9
+  );  
+
+
+process(sw0,sw1)
+
+    begin
+      abho1 <= not sw1 and not sw0; --this displays sum
+      abho2 <= not sw1 and sw0; -- this displays average
+      abho3 <= sw1 and not sw0; --this dipalys variance
+      abho4 <= sw1 and sw0; --this displays standard deviation
+
+--if rising edge is detected ,value from switches is stored in register
+      if (sw2 = '0') then
+        FOR i IN 1 to 10 LOOP
+          if (rising_edge(btnC)) then
+            temp(j) <= (others => '0');
+            temp(j)(3 downto 0) <= sw; 
+            brr(j) <= '1';
+            j := j+1;
+            chin2 <= chin2 +1;
+          end if;
+        END LOOP;
+        chin <= (others => '0');
+        chin(3 downto 0) <= chin2;
+               --disp <=temp(0)+temp(1)+temp(2)+temp(3)+temp(4)+temp(5)+temp(6)+temp(7)+temp(8);
+      elsif sw2 = '1' and sw0 = '0' and sw1 = '0' then
+        disp <=temp(0)+temp(1)+temp(2)+temp(3)+temp(4)+temp(5)+temp(6)+temp(7)+temp(8);
+        led <= (others => '0');
+        led(7 downto 0) <= disp; --displays the sum
+      elsif sw2 = '1' and sw0 = '1' and sw1='0' then
+        led <= disp2; --displays the average
+      elsif sw2 = '1' and sw0 = '0' and sw1='1' then
+        disp3 <=tempsq(0)+tempsq(1)+tempsq(2)+tempsq(3)+tempsq(4)+tempsq(5)+tempsq(6)+tempsq(7)+tempsq(8);
+        led <= disp8; --displays the variance
+      elsif sw2 = '1' and sw0 = '1' and sw1='1' then
+        led <= disp9; --displays the standard deviation
+      end if;
+    end process; 
+end Behavioral;

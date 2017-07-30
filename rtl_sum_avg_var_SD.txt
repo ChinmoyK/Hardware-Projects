@@ -1,0 +1,185 @@
+library IEEE; 
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use ieee.numeric_std.all;
+
+--entity declaration
+--3 input std_logic to display virious operations like add,average,variance and SD
+--sw2 is special switch used to take inputs ,if sw2=0 then take inputs otherwise display operations
+entity Counter2_VHDL is
+   port(
+   sw0 : in std_logic; 
+   sw1 : in std_logic; 
+   sw2 : in std_logic; 
+   clk : in std_logic;--for system clock
+   sw : in std_logic_vector(3 downto 0); --to take ragister value
+   led : out std_logic_vector(15 downto 0));--display required opertions
+end Counter2_VHDL;
+
+architecture Behavioral of Counter2_VHDL is
+    --This are temperory signals(std_logic_vector) used within archtecture
+   signal temp : std_logic_vector(7 downto 0) :=  (others=>'0');   
+   signal tempsq : std_logic_vector(15 downto 0) := (others=>'0');
+   signal disp:std_logic_vector(7 downto 0) := (others=>'0');
+   signal disp2:std_logic_vector(15 downto 0) := (others=>'0');
+   signal disp3:std_logic_vector(15 downto 0) := (others=>'0');
+   signal disp4:std_logic_vector(23 downto 0) := (others=>'0');
+   signal disp7:std_logic_vector(15 downto 0) := (others=>'0');
+   signal disp8:std_logic_vector(15 downto 0) := (others=>'0');
+   signal disp9:std_logic_vector(15 downto 0) := (others=>'0');
+   signal chin2:std_logic_vector(3 downto 0):= (others=>'0');
+   signal chin:std_logic_vector(7 downto 0):= (others=>'0');   --stores number of entries of register values till now
+     signal abho1:std_logic;--for state change
+     signal abho2:std_logic;
+     signal abho3:std_logic;
+     signal abho4:std_logic;
+--component for divider core generator
+COMPONENT div_gen_0
+  PORT (
+    aclk : IN STD_LOGIC;
+    aclken : IN STD_LOGIC;
+    s_axis_divisor_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    s_axis_dividend_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    m_axis_dout_tdata : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+
+--component subtractor core generator
+COMPONENT c_addsub_0
+  PORT (
+    A : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    B : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    CLK : IN STD_LOGIC;
+    CE : IN STD_LOGIC;
+    S : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+--component for squareroot core generator
+COMPONENT cordic_0
+  PORT (
+    aclk : IN STD_LOGIC;
+    aclken : IN STD_LOGIC;
+    s_axis_cartesian_tdata : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    m_axis_dout_tdata : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+--component for multiplier core generator
+COMPONENT mult_gen_0
+  PORT (
+    CLK : IN STD_LOGIC;
+    CE :  IN STD_LOGIC;
+    A : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    B : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    P : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+END COMPONENT;
+
+--component for divider core generator but this time for different input bit width
+COMPONENT div_gen_1
+  PORT (
+    aclk : IN STD_LOGIC;
+    aclken : IN STD_LOGIC;
+    s_axis_divisor_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    s_axis_dividend_tdata : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    m_axis_dout_tdata : OUT STD_LOGIC_VECTOR(23 DOWNTO 0)
+  );  
+END COMPONENT;  
+
+begin
+--port maping to call divider core generator
+inst1:div_gen_0
+  PORT MAP (
+    aclk => clk,
+    aclken => abho2,
+    s_axis_divisor_tdata => chin,
+    s_axis_dividend_tdata => disp,
+    m_axis_dout_tdata => disp2
+  );
+
+--port maping to call multiplier core generator
+a0 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    CE => '1',
+    A => temp,
+    B => temp,
+    P => tempsq
+  );
+
+--port maping to call divider core generator with different input bit width
+b1 : div_gen_1
+  PORT MAP (
+    aclk => clk,
+    aclken => abho3,
+    s_axis_divisor_tdata => chin,
+    s_axis_dividend_tdata => disp3,
+    m_axis_dout_tdata => disp4
+  );
+
+--port maping to call multiplier core generator
+b2 : mult_gen_0
+  PORT MAP (
+    CLK => clk,
+    CE => abho3,
+    A => disp2(15 downto 8),
+    B => disp2(15 downto 8),
+    P => disp7
+  );  
+
+--port maping to call subtractor core generator
+b3 : c_addsub_0
+  PORT MAP (
+    A => disp4(23 downto 8),
+    B => disp7,
+    CLK => clk,
+        CE => abho3,
+    S => disp8
+  );
+
+--port maping to call squareroot core generator
+c1: cordic_0
+  PORT MAP (
+    aclk => clk,
+      aclken => abho4,
+    s_axis_cartesian_tdata => disp8,
+    m_axis_dout_tdata => disp9
+  );  
+
+
+process(sw0,sw1)
+--depending upon sw0 and sw1 it will output diffenet operations
+    begin
+     abho1 <= not sw1 and not sw0; --this displays sum
+     abho2 <= not sw1 and sw0; -- this displays average
+     abho3 <= sw1 and not sw0; --this dipalys variance
+     abho4 <= sw1 and sw0; --this displays standard deviation
+      if (sw2 = '0') then
+        if (rising_edge(clk)) then --input taken at rising edge of system clock
+            temp <= (others => '0');
+            temp(3 downto 0) <= sw; 
+            chin2 <= chin2+1;
+        end if;
+      disp <= disp + temp;
+      disp3 <= disp3 + tempsq;
+      chin <= (others => '0');
+      chin(3 downto 0) <= chin2;--number of entries stored in here
+-- sum will be displayed
+      elsif sw2 = '1' and sw0 = '0' and sw1 = '0' then
+        led <= (others => '0');
+        led(7 downto 0) <= disp;--disp contains sum
+-- average will be displayed 
+      elsif sw2 = '1' and sw0 = '1' and sw1='0' then
+        led <= disp2;
+--variance will be displayed
+      elsif sw2 = '1' and sw0 = '0' and sw1='1' then
+        led <= disp8;
+--Standard deviation will be displayed
+      elsif sw2 = '1' and sw0 = '1' and sw1='1' then
+        led <= disp9;
+      end if;
+    end process; 
+end Behavioral;
